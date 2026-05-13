@@ -1,0 +1,90 @@
+/* TrendRadar Design System v2.0 - Swiss Modernism 2.0 */
+/* Grid system, Helvetica, modular, asymmetric, international style, rational, clean, mathematical spacing */
+
+:root {
+    /* ===== 1.1 色彩系统 - Swiss Modernism ===== */
+    /* Primary: Fresh cyan + clean green */
+    --primary: #0891B2;
+    --primary-light: #22D3EE;
+    --primary-dark: #0E7490;
+
+    /* CTA */
+    --cta: #22C55E;
+    --cta-hover: #16A34A;
+
+    /* Background */
+    --bg: #ECFEFF;
+    --bg-white: #FFFFFF;
+    --bg-light: #F0FDFA;
+    --bg-gray-50: #F9FAFB;
+    --bg-gray-100: #F3F4F6;
+
+    /* Text */
+    --text-primary: #164E63;
+    --text-secondary: #155E75;
+    --text-muted: #64748B;
+    --text-light: #94A3B8;
+
+    /* Borders */
+    --border: #E2E8F0;
+    --border-light: #F1F5F9;
+    --border-dark: #CBD5E1;
+
+    /* Status */
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+
+    /* Heat */
+    --hot: #DC2626;
+    --warm: #EA580C;
+
+    /* ===== 1.2 阴影系统 - 极简 ===== */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    /* ===== 1.3 圆角规范 - 极简 ===== */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    /* ===== 1.4 字体层级 - Inter (Swiss Modernism) ===== */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'SF Mono', Consolas, 'Courier New', monospace;
+
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-base: 16px;
+    --text-lg: 18px;
+    --text-xl: 22px;
+    --text-2xl: 28px;
+
+    --font-normal: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+
+    /* ===== 1.5 间距规范 (8px基准 - 数学间距) ===== */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* ===== 1.6 网格系统 - 12列 ===== */
+    --grid-columns: 12;
+    --grid-gap: 1rem;
+    --base-unit: 8px;
+
+    /* ===== 1.7 侧边栏宽度 ===== */
+    --sidebar-width: 240px;
+    --sidebar-collapsed: 64px;
+}

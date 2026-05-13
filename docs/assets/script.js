@@ -1313,21 +1313,26 @@ window.switchTab = function(tab) {
     if (saveTimeFrequency) saveTimeFrequency.classList.toggle('hidden', tab !== 'frequency');
     if (saveTimeTimeline) saveTimeTimeline.classList.toggle('hidden', tab !== 'timeline');
 
-    // 更新右侧标题
+    // 更新右侧标题（如果存在）
+    const rightPanelTitle = document.getElementById('right-panel-title');
     const versionBtn = document.getElementById('version-check-btn');
     if (tab === 'config') {
-        document.getElementById('right-panel-title').textContent = '配置模块';
+        if (rightPanelTitle) rightPanelTitle.textContent = '配置模块';
         if (versionBtn) { versionBtn.style.display = ''; versionBtn.title = "检测 config.yaml 版本"; }
     } else if (tab === 'frequency') {
-        document.getElementById('right-panel-title').textContent = '频率词编辑';
+        if (rightPanelTitle) rightPanelTitle.textContent = '频率词编辑';
         if (versionBtn) { versionBtn.style.display = ''; versionBtn.title = "检测 frequency_words.txt 版本"; }
     } else {
-        document.getElementById('right-panel-title').textContent = '时间线调度';
+        if (rightPanelTitle) rightPanelTitle.textContent = '时间线调度';
         if (versionBtn) versionBtn.style.display = 'none';
     }
 
+    // 关键修复：切换 Tab 时立即刷新对应面板
+    if (tab === 'config') {
+        syncYamlToUI();
+    }
     if (tab === 'frequency') {
-        renderFrequencyPanel();
+        syncFrequencyToUI();
     }
     if (tab === 'timeline') {
         syncTimelineToUI();
@@ -5781,3 +5786,75 @@ function toggleSupportSidebar() {
     btn.classList.toggle('is-collapsed', isCollapsed);
     btn.title = isCollapsed ? '展开侧栏' : '收起侧栏';
 }
+
+// 代码编辑器侧边栏 折叠/展开
+// ==========================================
+function toggleEditorSidebar() {
+    const sidebar = document.getElementById('editor-sidebar');
+    const btn = sidebar ? sidebar.querySelector('.editor-toggle-btn') : null;
+    if (!sidebar) return;
+    const isCollapsed = sidebar.classList.toggle('collapsed');
+    if (btn) {
+        btn.classList.toggle('is-collapsed', isCollapsed);
+        btn.title = isCollapsed ? '展开编辑器' : '收起编辑器';
+        btn.querySelector('i').className = isCollapsed ? 'fa-solid fa-chevron-left' : 'fa-solid fa-chevron-right';
+    }
+}
+
+// 主侧边栏折叠（移动端）
+// ==========================================
+function toggleMainSidebar() {
+    const sidebar = document.querySelector('.app-sidebar');
+    if (sidebar) sidebar.classList.toggle('open');
+}
+
+// 侧边栏导航交互 - 滚动联动
+// ==========================================
+function initSidebarNavInteraction() {
+    const sidebarLinks = document.querySelectorAll('.sidebar-nav-link[data-section]');
+    const sections = document.querySelectorAll('.module-section[id]');
+
+    if (sidebarLinks.length === 0 || sections.length === 0) return;
+
+    // 点击平滑滚动
+    sidebarLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            const sectionId = this.getAttribute('data-section');
+            const target = document.getElementById(sectionId);
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // 移动端点击后关闭侧边栏
+            const sidebar = document.querySelector('.app-sidebar');
+            if (sidebar && window.innerWidth <= 768) {
+                sidebar.classList.remove('open');
+            }
+        });
+    });
+
+    // IntersectionObserver 高亮联动
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                sidebarLinks.forEach(function(link) {
+                    link.classList.toggle('active', link.getAttribute('data-section') === id);
+                });
+            }
+        });
+    }, {
+        rootMargin: '-20% 0px -70% 0px',
+        threshold: 0
+    });
+
+    sections.forEach(function(sec) {
+        const id = sec.getAttribute('id');
+        if (id) observer.observe(sec);
+    });
+}
+
+// DOM ready 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    initSidebarNavInteraction();
+});

@@ -291,7 +291,7 @@ def _load_ai_analysis_config(config_data: Dict) -> Dict:
     return {
         "ENABLED": enabled_env if enabled_env is not None else ai_config.get("enabled", False),
         "LANGUAGE": ai_config.get("language", "Chinese"),
-        "PROMPT_FILE": ai_config.get("prompt_file", "ai_analysis_prompt.txt"),
+        "PROMPT_CONTENT": ai_config.get("prompt_content", ""),
         "MODE": ai_config.get("mode", "follow_report"),
         "MAX_NEWS_FOR_ANALYSIS": ai_config.get("max_news_for_analysis", 50),
         "INCLUDE_RSS": ai_config.get("include_rss", True),
@@ -327,10 +327,10 @@ def _load_ai_filter_config(config_data: Dict) -> Dict:
     return {
         "BATCH_SIZE": ai_filter.get("batch_size", 200),
         "BATCH_INTERVAL": ai_filter.get("batch_interval", 5),
-        "INTERESTS_FILE": ai_filter.get("interests_file"),  # None = 使用默认 config/ai_interests.txt
-        "PROMPT_FILE": ai_filter.get("prompt_file", "prompt.txt"),
-        "EXTRACT_PROMPT_FILE": ai_filter.get("extract_prompt_file", "extract_prompt.txt"),
-        "UPDATE_TAGS_PROMPT_FILE": ai_filter.get("update_tags_prompt_file", "update_tags_prompt.txt"),
+        "INTERESTS_CONTENT": ai_filter.get("interests_content", ""),
+        "PROMPT_CONTENT": ai_filter.get("classify_prompt", ""),
+        "EXTRACT_PROMPT_CONTENT": ai_filter.get("extract_prompt", ""),
+        "UPDATE_TAGS_PROMPT_CONTENT": ai_filter.get("update_tags_prompt", ""),
         "RECLASSIFY_THRESHOLD": ai_filter.get("reclassify_threshold", 0.6),
         "MIN_SCORE": float(ai_filter.get("min_score", 0)),
     }

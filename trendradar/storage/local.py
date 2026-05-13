@@ -1,20 +1,21 @@
 # coding=utf-8
 """
-本地存储后端 - SQLite + TXT/HTML
+本地存储后端 - MySQL + TXT/HTML
 
-使用 SQLite 作为主存储，支持可选的 TXT 快照和 HTML 报告
+使用 MySQL 作为主存储，支持可选的 TXT 快照和 HTML 报告
 """
 
-import sqlite3
+import pymysql
 import shutil
 import pytz
 import re
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from trendradar.storage.base import StorageBackend, NewsData, RSSItem, RSSData
-from trendradar.storage.sqlite_mixin import SQLiteStorageMixin
+from trendradar.storage.sqlite_mixin import MySQLStorageMixin
 from trendradar.utils.time import (
     DEFAULT_TIMEZONE,
     get_configured_time,
@@ -23,12 +24,12 @@ from trendradar.utils.time import (
 )
 
 
-class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
+class LocalStorageBackend(MySQLStorageMixin, StorageBackend):
     """
     本地存储后端
 
-    使用 SQLite 数据库存储新闻数据，支持：
-    - 按日期组织的 SQLite 数据库文件
+    使用 MySQL 数据库存储新闻数据，支持：
+    - 统一 MySQL 数据库存储
     - 可选的 TXT 快照（用于调试）
     - HTML 报告生成
     """
@@ -39,21 +40,35 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
         enable_txt: bool = True,
         enable_html: bool = True,
         timezone: str = DEFAULT_TIMEZONE,
+        mysql_config: Optional[Dict] = None,
     ):
         """
         初始化本地存储后端
 
         Args:
-            data_dir: 数据目录路径
+            data_dir: 数据目录路径（用于 TXT/HTML 快照）
             enable_txt: 是否启用 TXT 快照
             enable_html: 是否启用 HTML 报告
             timezone: 时区配置
+            mysql_config: MySQL 连接配置
         """
         self.data_dir = Path(data_dir)
         self.enable_txt = enable_txt
         self.enable_html = enable_html
         self.timezone = timezone
-        self._db_connections: Dict[str, sqlite3.Connection] = {}
+
+        # MySQL 连接配置
+        self.mysql_config = mysql_config or {
+            "host": os.environ.get("MYSQL_HOST", "192.168.25.64"),
+            "port": int(os.environ.get("MYSQL_PORT", "3306")),
+            "user": os.environ.get("MYSQL_USER", "root"),
+            "password": os.environ.get("MYSQL_PASSWORD", "wanggang"),
+            "database": os.environ.get("MYSQL_DATABASE", "trendradar"),
+            "charset": "utf8mb4",
+            "cursorclass": pymysql.cursors.DictCursor,
+        }
+
+        self._connection: Optional[pymysql.Connection] = None
 
     @property
     def backend_name(self) -> str:
@@ -64,7 +79,7 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
         return self.enable_txt
 
     # ========================================
-    # SQLiteStorageMixin 抽象方法实现
+    # MySQLStorageMixin 抽象方法实现
     # ========================================
 
     def _get_configured_time(self) -> datetime:
@@ -79,58 +94,31 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
         """格式化时间文件名 (格式: HH-MM)"""
         return format_time_filename(self.timezone)
 
-    def _get_db_path(self, date: Optional[str] = None, db_type: str = "news") -> Path:
+    def _get_connection(self) -> pymysql.Connection:
         """
-        获取 SQLite 数据库路径
-
-        新结构（扁平）：output/{type}/{date}.db
-        - output/news/2025-12-28.db
-        - output/rss/2025-12-28.db
-
-        Args:
-            date: 日期字符串
-            db_type: 数据库类型 ("news" 或 "rss")
+        获取 MySQL 数据库连接（单例）
 
         Returns:
-            数据库文件路径
+            MySQL 连接
         """
-        date_str = self._format_date_folder(date)
-        db_dir = self.data_dir / db_type
-        db_dir.mkdir(parents=True, exist_ok=True)
-        return db_dir / f"{date_str}.db"
+        if self._connection is None or not self._connection.open:
+            try:
+                self._connection = pymysql.connect(**self.mysql_config)
+                # 初始化表结构
+                self._init_tables(self._connection, "news")
+                self._init_tables(self._connection, "rss")
+            except Exception as e:
+                print(f"[本地存储] MySQL 连接失败: {e}")
+                raise
 
-    def _get_connection(self, date: Optional[str] = None, db_type: str = "news") -> sqlite3.Connection:
-        """
-        获取数据库连接（带缓存）
-
-        Args:
-            date: 日期字符串
-            db_type: 数据库类型 ("news" 或 "rss")
-
-        Returns:
-            数据库连接
-        """
-        db_path = str(self._get_db_path(date, db_type))
-
-        if db_path not in self._db_connections:
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            self._init_tables(conn, db_type)
-            self._db_connections[db_path] = conn
-
-        return self._db_connections[db_path]
+        return self._connection
 
     # ========================================
     # StorageBackend 接口实现（委托给 mixin）
     # ========================================
 
     def save_news_data(self, data: NewsData) -> bool:
-        """保存新闻数据到 SQLite"""
-        db_path = self._get_db_path(data.date)
-        if not db_path.exists():
-            # 确保目录存在
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-
+        """保存新闻数据到 MySQL"""
         success, new_count, updated_count, title_changed_count, off_list_count = \
             self._save_news_data_impl(data, "[本地存储]")
 
@@ -149,16 +137,10 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
 
     def get_today_all_data(self, date: Optional[str] = None) -> Optional[NewsData]:
         """获取指定日期的所有新闻数据（合并后）"""
-        db_path = self._get_db_path(date)
-        if not db_path.exists():
-            return None
         return self._get_today_all_data_impl(date)
 
     def get_latest_crawl_data(self, date: Optional[str] = None) -> Optional[NewsData]:
         """获取最新一次抓取的数据"""
-        db_path = self._get_db_path(date)
-        if not db_path.exists():
-            return None
         return self._get_latest_crawl_data_impl(date)
 
     def detect_new_titles(self, current_data: NewsData) -> Dict[str, Dict]:
@@ -167,16 +149,10 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
 
     def is_first_crawl_today(self, date: Optional[str] = None) -> bool:
         """检查是否是当天第一次抓取"""
-        db_path = self._get_db_path(date)
-        if not db_path.exists():
-            return True
         return self._is_first_crawl_today_impl(date)
 
     def get_crawl_times(self, date: Optional[str] = None) -> List[str]:
         """获取指定日期的所有抓取时间列表"""
-        db_path = self._get_db_path(date)
-        if not db_path.exists():
-            return []
         return self._get_crawl_times_impl(date)
 
     # ========================================
@@ -200,7 +176,7 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
     # ========================================
 
     def save_rss_data(self, data: RSSData) -> bool:
-        """保存 RSS 数据到 SQLite"""
+        """保存 RSS 数据到 MySQL"""
         success, new_count, updated_count = self._save_rss_data_impl(data, "[本地存储]")
 
         if success:
@@ -222,9 +198,6 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
 
     def get_latest_rss_data(self, date: Optional[str] = None) -> Optional[RSSData]:
         """获取最新一次抓取的 RSS 数据"""
-        db_path = self._get_db_path(date, db_type="rss")
-        if not db_path.exists():
-            return None
         return self._get_latest_rss_data_impl(date)
 
     # ========================================
@@ -287,17 +260,7 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
     # ========================================
 
     def save_txt_snapshot(self, data: NewsData) -> Optional[str]:
-        """
-        保存 TXT 快照
-
-        新结构：output/txt/{date}/{time}.txt
-
-        Args:
-            data: 新闻数据
-
-        Returns:
-            保存的文件路径
-        """
+        """保存 TXT 快照"""
         if not self.enable_txt:
             return None
 
@@ -312,13 +275,11 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
                 for source_id, news_list in data.items.items():
                     source_name = data.id_to_name.get(source_id, source_id)
 
-                    # 写入来源标题
                     if source_name and source_name != source_id:
                         f.write(f"{source_id} | {source_name}\n")
                     else:
                         f.write(f"{source_id}\n")
 
-                    # 按排名排序
                     sorted_news = sorted(news_list, key=lambda x: x.rank)
 
                     for item in sorted_news:
@@ -331,7 +292,6 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
 
                     f.write("\n")
 
-                # 写入失败的来源
                 if data.failed_ids:
                     f.write("==== 以下ID请求失败 ====\n")
                     for failed_id in data.failed_ids:
@@ -345,18 +305,7 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
             return None
 
     def save_html_report(self, html_content: str, filename: str) -> Optional[str]:
-        """
-        保存 HTML 报告
-
-        新结构：output/html/{date}/{filename}
-
-        Args:
-            html_content: HTML 内容
-            filename: 文件名
-
-        Returns:
-            保存的文件路径
-        """
+        """保存 HTML 报告"""
         if not self.enable_html:
             return None
 
@@ -383,85 +332,83 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
 
     def cleanup(self) -> None:
         """清理资源（关闭数据库连接）"""
-        for db_path, conn in self._db_connections.items():
+        if self._connection and self._connection.open:
             try:
-                conn.close()
-                print(f"[本地存储] 关闭数据库连接: {db_path}")
+                self._connection.close()
+                print("[本地存储] MySQL 连接已关闭")
             except Exception as e:
-                print(f"[本地存储] 关闭连接失败 {db_path}: {e}")
+                print(f"[本地存储] 关闭连接失败: {e}")
 
-        self._db_connections.clear()
+        self._connection = None
 
     def cleanup_old_data(self, retention_days: int) -> int:
         """
         清理过期数据
 
-        新结构清理逻辑：
-        - output/news/{date}.db  -> 删除过期的 .db 文件
-        - output/rss/{date}.db   -> 删除过期的 .db 文件
-        - output/txt/{date}/     -> 删除过期的日期目录
-        - output/html/{date}/    -> 删除过期的日期目录
+        MySQL 模式下清理数据库中的旧日期数据，以及本地的 TXT/HTML 快照
 
         Args:
             retention_days: 保留天数（0 表示不清理）
 
         Returns:
-            删除的文件/目录数量
+            删除的记录/文件数量
         """
         if retention_days <= 0:
             return 0
 
         deleted_count = 0
         cutoff_date = self._get_configured_time() - timedelta(days=retention_days)
-
-        def parse_date_from_name(name: str) -> Optional[datetime]:
-            """从文件名或目录名解析日期 (ISO 格式: YYYY-MM-DD)"""
-            # 移除 .db 后缀
-            name = name.replace('.db', '')
-            try:
-                date_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', name)
-                if date_match:
-                    return datetime(
-                        int(date_match.group(1)),
-                        int(date_match.group(2)),
-                        int(date_match.group(3)),
-                        tzinfo=pytz.timezone(self.timezone)
-                    )
-            except Exception:
-                pass
-            return None
+        cutoff_str = cutoff_date.strftime("%Y-%m-%d")
 
         try:
+            # 清理 MySQL 中的旧数据
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # 删除旧日期的新闻相关数据
+            cursor.execute("DELETE FROM news_items WHERE date < %s", (cutoff_str,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM crawl_records WHERE date < %s", (cutoff_str,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM period_executions WHERE execution_date < %s", (cutoff_str,))
+            deleted_count += cursor.rowcount
+
+            # RSS 数据
+            cursor.execute("DELETE FROM rss_items WHERE date < %s", (cutoff_str,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM rss_crawl_records WHERE date < %s", (cutoff_str,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM rss_push_records WHERE date < %s", (cutoff_str,))
+            deleted_count += cursor.rowcount
+
+            conn.commit()
+
+            if deleted_count > 0:
+                print(f"[本地存储] MySQL 清理了 {deleted_count} 条过期记录")
+
+            # 清理本地快照目录 (txt/, html/)
+            def parse_date_from_name(name: str) -> Optional[datetime]:
+                name = name.replace('.db', '')
+                try:
+                    date_match = re.match(r'(\d{4})-(\d{2})-(\d{2})', name)
+                    if date_match:
+                        return datetime(
+                            int(date_match.group(1)),
+                            int(date_match.group(2)),
+                            int(date_match.group(3)),
+                            tzinfo=pytz.timezone(self.timezone)
+                        )
+                except Exception:
+                    pass
+                return None
+
             if not self.data_dir.exists():
-                return 0
+                return deleted_count
 
-            # 清理数据库文件 (news/, rss/)
-            for db_type in ["news", "rss"]:
-                db_dir = self.data_dir / db_type
-                if not db_dir.exists():
-                    continue
-
-                for db_file in db_dir.glob("*.db"):
-                    file_date = parse_date_from_name(db_file.name)
-                    if file_date and file_date < cutoff_date:
-                        # 先关闭数据库连接
-                        db_path = str(db_file)
-                        if db_path in self._db_connections:
-                            try:
-                                self._db_connections[db_path].close()
-                                del self._db_connections[db_path]
-                            except Exception:
-                                pass
-
-                        # 删除文件
-                        try:
-                            db_file.unlink()
-                            deleted_count += 1
-                            print(f"[本地存储] 清理过期数据: {db_type}/{db_file.name}")
-                        except Exception as e:
-                            print(f"[本地存储] 删除文件失败 {db_file}: {e}")
-
-            # 清理快照目录 (txt/, html/)
             for snapshot_type in ["txt", "html"]:
                 snapshot_dir = self.data_dir / snapshot_type
                 if not snapshot_dir.exists():
@@ -481,7 +428,7 @@ class LocalStorageBackend(SQLiteStorageMixin, StorageBackend):
                             print(f"[本地存储] 删除目录失败 {date_folder}: {e}")
 
             if deleted_count > 0:
-                print(f"[本地存储] 共清理 {deleted_count} 个过期文件/目录")
+                print(f"[本地存储] 共清理 {deleted_count} 个过期记录/文件/目录")
 
             return deleted_count
 

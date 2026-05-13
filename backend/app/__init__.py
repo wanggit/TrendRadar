@@ -1,0 +1,1 @@
+# TrendRadar SaaS Backend

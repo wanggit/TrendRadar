@@ -49,19 +49,31 @@ class AIFilter:
         self.get_time_func = get_time_func
         self.debug = debug
 
-        # 加载提示词模板
-        self.classify_system, self.classify_user = load_prompt_template(
-            filter_config.get("PROMPT_FILE", "ai_filter_prompt.txt"),
-            config_subdir="ai_filter", label="AI筛选",
-        )
-        self.extract_system, self.extract_user = load_prompt_template(
-            filter_config.get("EXTRACT_PROMPT_FILE", "ai_filter_extract_prompt.txt"),
-            config_subdir="ai_filter", label="AI筛选",
-        )
-        self.update_tags_system, self.update_tags_user = load_prompt_template(
-            filter_config.get("UPDATE_TAGS_PROMPT_FILE", "update_tags_prompt.txt"),
-            config_subdir="ai_filter", label="AI筛选",
-        )
+        # 直接使用配置中的提示词内容
+        prompt_content = filter_config.get("PROMPT_CONTENT", "")
+        self.classify_system, self.classify_user = self._parse_prompt_content(prompt_content)
+        print(f"[AI筛选] 分类提示词已加载 (system: {len(self.classify_system)} chars, user: {len(self.classify_user)} chars)")
+        
+        extract_content = filter_config.get("EXTRACT_PROMPT_CONTENT", "")
+        self.extract_system, self.extract_user = self._parse_prompt_content(extract_content)
+        print(f"[AI筛选] 标签提取提示词已加载 (system: {len(self.extract_system)} chars, user: {len(self.extract_user)} chars)")
+        
+        update_content = filter_config.get("UPDATE_TAGS_PROMPT_CONTENT", "")
+        self.update_tags_system, self.update_tags_user = self._parse_prompt_content(update_content)
+        print(f"[AI筛选] 标签更新提示词已加载 (system: {len(self.update_tags_system)} chars, user: {len(self.update_tags_user)} chars)")
+
+    def _parse_prompt_content(self, content: str) -> tuple:
+        """解析 [system]/[user] 格式的提示词内容"""
+        if not content:
+            return "", ""
+        if "[system]" in content and "[user]" in content:
+            parts = content.split("[user]")
+            system_part = parts[0]
+            user_part = parts[1] if len(parts) > 1 else ""
+            system_prompt = system_part.split("[system]")[1].strip() if "[system]" in system_part else ""
+            user_prompt = user_part.strip()
+            return system_prompt, user_prompt
+        return "", content.strip()
 
     def compute_interests_hash(self, interests_content: str, filename: str = "ai_interests.txt") -> str:
         """计算兴趣描述的 hash，格式为 filename:md5"""
@@ -75,43 +87,17 @@ class AIFilter:
         content_hash = hashlib.md5(normalized.encode("utf-8")).hexdigest()
         return f"{filename}:{content_hash}"
 
-    def load_interests_content(self, interests_file: Optional[str] = None) -> Optional[str]:
-        """加载兴趣描述文件内容
+    def load_interests_content(self, interests_content: Optional[str] = None) -> Optional[str]:
+        """加载兴趣描述内容
 
-        解析逻辑：
-        - interests_file 为 None：使用默认 config/ai_interests.txt
-        - interests_file 有值：仅查 config/custom/ai/{filename}
-
-        注意：调用方（context.py）已完成 config/timeline 的合并决策，
-        此处不再二次读取 filter_config，避免语义冲突。
+        直接使用传入的内容，不再从文件读取
         """
-        config_dir = Path(__file__).parent.parent.parent / "config"
-        configured_file = interests_file
-
-        if configured_file:
-            # 自定义兴趣文件：仅查 custom/ai 目录
-            filename = configured_file
-            interests_path = config_dir / "custom" / "ai" / filename
-            if not interests_path.exists():
-                print(f"[AI筛选] 自定义兴趣描述文件不存在: {filename}")
-                print(f"[AI筛选]   已查找: {interests_path}")
-                return None
-        else:
-            # 默认兴趣文件：固定使用 config/ai_interests.txt
-            filename = "ai_interests.txt"
-            interests_path = config_dir / filename
-            if not interests_path.exists():
-                print(f"[AI筛选] 默认兴趣描述文件不存在: {filename}")
-                print(f"[AI筛选]   已查找: {interests_path}")
-                return None
-
-        if not interests_path.exists():
-            print(f"[AI筛选] 兴趣描述文件不存在: {interests_path}")
+        if not interests_content:
             return None
-
-        content = interests_path.read_text(encoding="utf-8").strip()
+        
+        content = interests_content.strip()
         if not content:
-            print("[AI筛选] 兴趣描述文件为空")
+            print("[AI筛选] 兴趣描述内容为空")
             return None
 
         return content
@@ -131,6 +117,10 @@ class AIFilter:
             return []
 
         user_prompt = self.extract_user.replace("{interests_content}", interests_content)
+
+        print(f"[AI筛选] 标签提取: 发送请求 (提示词长度: {len(user_prompt)})")
+        if self.debug:
+            print(f"[AI筛选][DEBUG] 标签提取 User Prompt:\n{user_prompt[:500]}...")
 
         messages = []
         if self.extract_system:
@@ -208,6 +198,10 @@ class AIFilter:
         ).replace(
             "{interests_content}", interests_content
         )
+
+        print(f"[AI筛选] 标签更新: 发送请求 (提示词长度: {len(user_prompt)})")
+        if self.debug:
+            print(f"[AI筛选][DEBUG] 标签更新 User Prompt:\n{user_prompt[:500]}...")
 
         messages = []
         if self.update_tags_system:
@@ -349,6 +343,10 @@ class AIFilter:
         user_prompt = user_prompt.replace("{tags_list}", tags_list)
         user_prompt = user_prompt.replace("{news_count}", str(len(titles)))
         user_prompt = user_prompt.replace("{news_list}", news_list)
+
+        print(f"[AI筛选] 分类: 发送请求 (提示词长度: {len(user_prompt)}, 标题数: {len(titles)})")
+        if self.debug:
+            print(f"[AI筛选][DEBUG] 分类 User Prompt (前500字符):\n{user_prompt[:500]}...")
 
         messages = []
         if self.classify_system:

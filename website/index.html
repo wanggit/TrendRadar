@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendRadar - 让关键信息在关键时刻主动找到你</title>
+    <meta name="description" content="全网热点情报系统，精准过滤、实时推送、AI 深度分析。告别无效刷屏，只看真正关心的资讯。">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#f0fdfa', 100: '#ccfbf1', 200: '#99f6e4', 300: '#5eead4', 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a' },
+                        cta: { 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' },
+                    },
+                    fontFamily: {
+                        heading: ['Space Grotesk', 'sans-serif'],
+                        body: ['DM Sans', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'fade-in': 'fadeIn 0.8s ease-out',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        slideUp: { '0%': { transform: 'translateY(30px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        body { font-family: 'DM Sans', sans-serif; }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Space Grotesk', sans-serif; }
+        .gradient-text { background: linear-gradient(135deg, #0f766e 0%, #14b8a6 50%, #0ea5e9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .hero-gradient { background: radial-gradient(ellipse at top, #f0fdfa 0%, #ffffff 50%, #f8fafc 100%); }
+        .card-hover { transition: all 0.25s ease; }
+        .card-hover:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(15, 118, 110, 0.15); }
+        .scroll-reveal { opacity: 0; transform: translateY(30px); transition: all 0.6s ease-out; }
+        .scroll-reveal.visible { opacity: 1; transform: translateY(0); }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+    </style>
+</head>
+<body class="bg-white text-primary-900 antialiased">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16 lg:h-20">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary-600 to-cta-500 rounded-lg flex items-center justify-center">
+                        <i data-lucide="radar" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <span class="text-xl font-bold font-heading text-primary-900">TrendRadar</span>
+                </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#value" class="text-sm text-primary-700 hover:text-primary-500 transition-colors">核心价值</a>
+                    <a href="#audience" class="text-sm text-primary-700 hover:text-primary-500 transition-colors">适用人群</a>
+                    <a href="#how-it-works" class="text-sm text-primary-700 hover:text-primary-500 transition-colors">工作原理</a>
+                    <a href="#features" class="text-sm text-primary-700 hover:text-primary-500 transition-colors">功能亮点</a>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/login" class="hidden sm:block text-sm text-primary-700 hover:text-primary-500 transition-colors">登录</a>
+                    <a href="/register" class="bg-cta-600 hover:bg-cta-700 text-white px-5 py-2 rounded-full text-sm font-medium transition-all hover:shadow-lg">
+                        免费试用
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-gradient min-h-screen flex items-center pt-20 relative overflow-hidden">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-40 -right-40 w-96 h-96 bg-primary-200 rounded-full opacity-30 blur-3xl animate-pulse-slow"></div>
+            <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-cta-200 rounded-full opacity-30 blur-3xl animate-pulse-slow" style="animation-delay: 2s;"></div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                <div class="animate-slide-up">
+                    <div class="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-4 py-2 mb-6">
+                        <span class="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></span>
+                        <span class="text-sm text-primary-700 font-medium">全网热点情报系统</span>
+                    </div>
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold font-heading leading-tight mb-6">
+                        让关键信息<br>
+                        <span class="gradient-text">在关键时刻</span><br>
+                        主动找到你
+                    </h1>
+                    <p class="text-lg sm:text-xl text-primary-700 mb-8 leading-relaxed max-w-lg">
+                        告别无效刷屏。TrendRadar 聚合全网热点，用 AI 精准过滤，只推送你真正关心的资讯——在它们还有价值的时候。
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="#cta" class="bg-cta-600 hover:bg-cta-700 text-white px-8 py-4 rounded-full text-center font-medium transition-all hover:shadow-xl hover:shadow-cta-500/25 flex items-center justify-center gap-2">
+                            <span>开始免费试用</span>
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </a>
+                        <a href="#how-it-works" class="border-2 border-primary-200 hover:border-primary-400 text-primary-700 px-8 py-4 rounded-full text-center font-medium transition-all hover:bg-primary-50 flex items-center justify-center gap-2">
+                            <i data-lucide="play-circle" class="w-5 h-5"></i>
+                            <span>了解工作原理</span>
+                        </a>
+                    </div>
+                    <div class="flex items-center gap-6 mt-8 text-sm text-primary-600">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-primary-500"></i>
+                            <span>7 天免费试用</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-primary-500"></i>
+                            <span>无需配置</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-primary-500"></i>
+                            <span>即开即用</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative animate-fade-in">
+                    <div class="relative bg-white rounded-2xl shadow-2xl shadow-primary-900/10 border border-primary-100 p-6 animate-float">
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="trending-up" class="w-5 h-5 text-red-500"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm font-semibold text-primary-900">热点预警</span>
+                                    <span class="text-xs text-primary-500">刚刚</span>
+                                </div>
+                                <p class="text-sm text-primary-700">央行宣布降息 25 个基点，为年内第三次</p>
+                                <div class="flex items-center gap-3 mt-2 text-xs text-primary-500">
+                                    <span class="flex items-center gap-1"><i data-lucide="zap" class="w-3 h-3"></i> 热度飙升</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="bar-chart-3" class="w-3 h-3"></i> 跨 8 个平台</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t border-primary-100 pt-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="brain" class="w-5 h-5 text-amber-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <span class="text-sm font-semibold text-primary-900">AI 分析</span>
+                                    <p class="text-xs text-primary-600 mt-1">此次降息指向经济下行压力增大，预计将对股市、房贷、消费贷产生直接影响...</p>
+                                    <div class="flex gap-2 mt-2">
+                                        <span class="bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded">影响: 高</span>
+                                        <span class="bg-amber-50 text-amber-600 text-xs px-2 py-0.5 rounded">情绪: 谨慎</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="absolute -top-4 -right-4 bg-white rounded-xl shadow-lg border border-primary-100 px-4 py-2 animate-float" style="animation-delay: 1s;">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="shield-check" class="w-4 h-4 text-primary-500"></i>
+                            <span class="text-xs font-medium text-primary-700">9 个推送渠道</span>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg border border-primary-100 px-4 py-2 animate-float" style="animation-delay: 2s;">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="clock" class="w-4 h-4 text-cta-500"></i>
+                            <span class="text-xs font-medium text-primary-700">分钟级触达</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pain Points Section -->
+    <section class="py-20 lg:py-28 bg-primary-900 text-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-b from-primary-900 to-primary-800"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-primary-300 text-sm font-medium uppercase tracking-wider">你是否正在经历</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">信息时代的三大困境</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="scroll-reveal glass-card rounded-2xl p-8 card-hover">
+                    <div class="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="timer" class="w-7 h-7 text-red-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading mb-3 text-gray-900">信息过载</h3>
+                    <p class="text-gray-600 leading-relaxed">每天刷 10+ 个 App 看热搜，90% 的内容与你无关。宝贵的注意力被无限消耗。</p>
+                </div>
+                <div class="scroll-reveal glass-card rounded-2xl p-8 card-hover" style="transition-delay: 0.1s;">
+                    <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="hourglass" class="w-7 h-7 text-amber-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading mb-3 text-gray-900">信息滞后</h3>
+                    <p class="text-gray-600 leading-relaxed">等你刷到热点时，最佳决策窗口已经关闭。在投资、公关、内容创作中，迟到就是错过。</p>
+                </div>
+                <div class="scroll-reveal glass-card rounded-2xl p-8 card-hover" style="transition-delay: 0.2s;">
+                    <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="puzzle" class="w-7 h-7 text-blue-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading mb-3 text-gray-900">信息碎片化</h3>
+                    <p class="text-gray-600 leading-relaxed">同一事件散落在不同平台，看不清全貌。缺乏深度分析，只看到"发生了什么"，不知道"意味着什么"。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Value Section -->
+    <section id="value" class="py-20 lg:py-28 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-cta-600 text-sm font-medium uppercase tracking-wider">核心价值</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">三类信息，直接关联你的核心利益</h2>
+                <p class="text-lg text-primary-700 max-w-2xl mx-auto">TrendRadar 确保对你有价值的信息，在它还有价值的时候，主动出现在你面前。</p>
+            </div>
+            <div class="grid lg:grid-cols-3 gap-8">
+                <div class="scroll-reveal group">
+                    <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 h-full border border-green-100 card-hover">
+                        <div class="w-14 h-14 bg-green-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <i data-lucide="trending-up" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold font-heading mb-4 text-primary-900">赚钱 / 省钱</h3>
+                        <p class="text-primary-700 mb-6 leading-relaxed">时效直接关联经济利益。晚 10 分钟，可能错过买卖窗口。</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">政策变动、行业利好利空，第一时间捕捉</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">关税政策、汇率波动，及时调整策略</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">原材料价格异动，提前锁定成本</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="scroll-reveal group" style="transition-delay: 0.1s;">
+                    <div class="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-8 h-full border border-red-100 card-hover">
+                        <div class="w-14 h-14 bg-red-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <i data-lucide="shield-alert" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold font-heading mb-4 text-primary-900">避险预警</h3>
+                        <p class="text-primary-700 mb-6 leading-relaxed">时效直接关联安全与声誉。2 小时内响应 vs 24 小时后响应，代价差一个数量级。</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">负面舆情发酵初期介入，成本最低</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">监管新规、行业整顿信号，提前调整业务</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">自然灾害、突发事件，第一时间预警</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="scroll-reveal group" style="transition-delay: 0.2s;">
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 h-full border border-blue-100 card-hover">
+                        <div class="w-14 h-14 bg-blue-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                            <i data-lucide="lightbulb" class="w-7 h-7 text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold font-heading mb-4 text-primary-900">先发机会</h3>
+                        <p class="text-primary-700 mb-6 leading-relaxed">时效直接关联先发优势。热点刚冒头时产出内容，流量是消退后的 10 倍。</p>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">热点刚冒头时产出内容，抢占流量红利</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">客户公司融资、扩张信号，第一时间跟进</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <i data-lucide="check" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+                                <span class="text-primary-700">目标公司业务调整，提前布局求职或合作</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Target Audience Section -->
+    <section id="audience" class="py-20 lg:py-28 bg-primary-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-primary-600 text-sm font-medium uppercase tracking-wider">适用人群</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">谁最需要 TrendRadar？</h2>
+                <p class="text-lg text-primary-700 max-w-2xl mx-auto">判断标准：你的工作中，是否存在"信息晚到 X 分钟，代价显著增加"的场景？</p>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover">
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="line-chart" class="w-6 h-6 text-green-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">投资者 / 交易员</h3>
+                    <p class="text-sm text-primary-600">分钟级时效。政策变动、突发事件影响股价，晚 10 分钟可能错过买卖窗口。</p>
+                    <div class="mt-4 pt-4 border-t border-primary-100">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            分钟级
+                        </span>
+                    </div>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.1s;">
+                    <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="megaphone" class="w-6 h-6 text-red-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">企业公关 / 品牌</h3>
+                    <p class="text-sm text-primary-600">小时级时效。负面舆情发酵初期介入成本最低，2 小时 vs 24 小时响应代价差 10 倍。</p>
+                    <div class="mt-4 pt-4 border-t border-primary-100">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded-full">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            小时级
+                        </span>
+                    </div>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.2s;">
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="pen-tool" class="w-6 h-6 text-blue-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">自媒体 / 创作者</h3>
+                    <p class="text-sm text-primary-600">小时级时效。热点刚冒头时产出内容，流量是热点消退后的 10 倍以上。</p>
+                    <div class="mt-4 pt-4 border-t border-primary-100">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            小时级
+                        </span>
+                    </div>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.3s;">
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="briefcase" class="w-6 h-6 text-purple-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">销售 / BD / 求职</h3>
+                    <p class="text-sm text-primary-600">天级时效。客户融资、扩张、人事变动信号，提前布局合作或求职机会。</p>
+                    <div class="mt-4 pt-4 border-t border-primary-100">
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            天级
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="py-20 lg:py-28 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-cta-600 text-sm font-medium uppercase tracking-wider">工作原理</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">三步构建你的情报系统</h2>
+            </div>
+            <div class="grid lg:grid-cols-3 gap-8 relative">
+                <div class="hidden lg:block absolute top-24 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200"></div>
+                <div class="scroll-reveal text-center">
+                    <div class="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 relative z-10">
+                        <span class="text-2xl font-bold text-white">1</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading mb-3">定义关注</h3>
+                    <p class="text-primary-700">用自然语言告诉 AI 你关心什么，或设置精准关键词。支持分时段策略——早上看科技快讯，晚上看金融深度。</p>
+                </div>
+                <div class="scroll-reveal text-center" style="transition-delay: 0.15s;">
+                    <div class="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 relative z-10">
+                        <span class="text-2xl font-bold text-white">2</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading mb-3">智能监控</h3>
+                    <p class="text-primary-700">系统 7×24 小时聚合 11+ 主流平台热点，AI 实时筛选、去重、分析趋势，过滤 90% 无关噪音。</p>
+                </div>
+                <div class="scroll-reveal text-center" style="transition-delay: 0.3s;">
+                    <div class="w-16 h-16 bg-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 relative z-10">
+                        <span class="text-2xl font-bold text-white">3</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-heading mb-3">即时触达</h3>
+                    <p class="text-primary-700">关键信息通过你选择的渠道（微信、飞书、邮件等 9 种）主动推送，附带 AI 深度分析报告。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 lg:py-28 bg-primary-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-primary-600 text-sm font-medium uppercase tracking-wider">功能亮点</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">不只是聚合，更是情报</h2>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover">
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="globe" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">全网热点聚合</h3>
+                    <p class="text-sm text-primary-600">聚合知乎、微博、抖音、百度等 11+ 主流平台，也可自定义添加额外平台。</p>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.1s;">
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="brain" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">AI 智能筛选</h3>
+                    <p class="text-sm text-primary-600">用自然语言描述兴趣，AI 自动提取标签并给每条新闻打分，只推送真正相关的内容。</p>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.2s;">
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="sparkles" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">AI 深度分析</h3>
+                    <p class="text-sm text-primary-600">自动生成趋势概述、情感倾向、跨平台关联、潜在影响评估，告诉你"意味着什么"。</p>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.3s;">
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="bell-ring" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">全渠道推送</h3>
+                    <p class="text-sm text-primary-600">支持企业微信、飞书、钉钉、Telegram、邮件等 9 种渠道，消息直达手机和邮箱。</p>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.4s;">
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="activity" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">热度趋势追踪</h3>
+                    <p class="text-sm text-primary-600">实时追踪新闻热度变化，区分一次性热点和持续发酵的深度新闻，看清趋势演变。</p>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-6 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.5s;">
+                    <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center mb-4">
+                        <i data-lucide="rss" class="w-6 h-6 text-primary-600"></i>
+                    </div>
+                    <h3 class="text-lg font-bold font-heading mb-2">RSS 订阅支持</h3>
+                    <p class="text-sm text-primary-600">支持 RSS/Atom 订阅源抓取，按关键词分组统计，与热榜格式统一推送。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof Section -->
+    <section class="py-20 lg:py-28 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-primary-600 text-sm font-medium uppercase tracking-wider">社会证明</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">受到广泛认可</h2>
+            </div>
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+                <div class="scroll-reveal text-center">
+                    <div class="text-4xl font-bold font-heading gradient-text mb-2">10,000+</div>
+                    <p class="text-primary-600">活跃用户</p>
+                </div>
+                <div class="scroll-reveal text-center" style="transition-delay: 0.1s;">
+                    <div class="text-4xl font-bold font-heading gradient-text mb-2">11+</div>
+                    <p class="text-primary-600">主流平台聚合</p>
+                </div>
+                <div class="scroll-reveal text-center" style="transition-delay: 0.2s;">
+                    <div class="text-4xl font-bold font-heading gradient-text mb-2">9</div>
+                    <p class="text-primary-600">推送渠道支持</p>
+                </div>
+                <div class="scroll-reveal text-center" style="transition-delay: 0.3s;">
+                    <div class="text-4xl font-bold font-heading gradient-text mb-2">99.9%</div>
+                    <p class="text-primary-600">服务可用性</p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="scroll-reveal bg-primary-50 rounded-2xl p-6">
+                    <div class="flex items-center gap-1 mb-4">
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                    </div>
+                    <p class="text-primary-700 mb-4 italic">"做短线交易，信息就是金钱。TrendRadar 让我比同行快一步捕捉政策信号，这价值无法用价格衡量。"</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary-200 rounded-full flex items-center justify-center text-primary-700 font-bold">L</div>
+                        <div>
+                            <p class="text-sm font-medium text-primary-900">李先生</p>
+                            <p class="text-xs text-primary-500">股票投资者</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="scroll-reveal bg-primary-50 rounded-2xl p-6" style="transition-delay: 0.1s;">
+                    <div class="flex items-center gap-1 mb-4">
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                    </div>
+                    <p class="text-primary-700 mb-4 italic">"以前每天花两小时刷新闻，现在 TrendRadar 把 relevant 的信息推到我面前，每天节省 90 分钟。"</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary-200 rounded-full flex items-center justify-center text-primary-700 font-bold">W</div>
+                        <div>
+                            <p class="text-sm font-medium text-primary-900">王女士</p>
+                            <p class="text-xs text-primary-500">企业公关总监</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="scroll-reveal bg-primary-50 rounded-2xl p-6" style="transition-delay: 0.2s;">
+                    <div class="flex items-center gap-1 mb-4">
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                        <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                    </div>
+                    <p class="text-primary-700 mb-4 italic">"热点刚冒头就能收到推送，抢到了第一波流量。AI 分析还帮我快速理清事件脉络，出稿速度快了一倍。"</p>
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary-200 rounded-full flex items-center justify-center text-primary-700 font-bold">Z</div>
+                        <div>
+                            <p class="text-sm font-medium text-primary-900">张先生</p>
+                            <p class="text-xs text-primary-500">科技自媒体</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-16 text-center scroll-reveal">
+                <p class="text-sm text-primary-500 mb-4">获以下平台推荐</p>
+                <div class="flex flex-wrap justify-center gap-8 items-center">
+                    <span class="text-primary-600 font-medium">小众软件</span>
+                    <span class="text-primary-300">|</span>
+                    <span class="text-primary-600 font-medium">LinuxDo 社区</span>
+                    <span class="text-primary-300">|</span>
+                    <span class="text-primary-600 font-medium">阮一峰技术周刊</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="py-20 lg:py-28 bg-primary-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16 scroll-reveal">
+                <span class="text-cta-600 text-sm font-medium uppercase tracking-wider">定价方案</span>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mt-4 mb-6">选择适合你的方案</h2>
+                <p class="text-lg text-primary-700">所有方案均享 7 天免费试用，无需信用卡。</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <div class="scroll-reveal bg-white rounded-2xl p-8 shadow-sm border border-primary-100 card-hover">
+                    <h3 class="text-xl font-bold font-heading mb-2">免费版</h3>
+                    <p class="text-sm text-primary-500 mb-6">适合个人用户初步体验</p>
+                    <div class="mb-6">
+                        <span class="text-4xl font-bold font-heading">¥0</span>
+                        <span class="text-primary-500">/月</span>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">3 个热榜平台</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">5 个关键词组</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">每日 4 次推送</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">1 个推送渠道</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="x" class="w-5 h-5 text-primary-300 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-400">AI 分析</span>
+                        </li>
+                    </ul>
+                    <a href="#cta" class="block text-center border-2 border-primary-200 hover:border-primary-400 text-primary-700 px-6 py-3 rounded-full font-medium transition-all hover:bg-primary-50">
+                        开始使用
+                    </a>
+                </div>
+                <div class="scroll-reveal bg-gradient-to-br from-primary-600 to-primary-800 rounded-2xl p-8 text-white shadow-xl relative card-hover" style="transition-delay: 0.1s;">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-cta-500 text-white text-xs font-medium px-3 py-1 rounded-full">最受欢迎</div>
+                    <h3 class="text-xl font-bold font-heading mb-2">专业版</h3>
+                    <p class="text-sm text-primary-200 mb-6">适合专业人士和团队</p>
+                    <div class="mb-6">
+                        <span class="text-4xl font-bold font-heading">¥49</span>
+                        <span class="text-primary-200">/月</span>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-200 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-100">15 个热榜平台</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-200 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-100">无限关键词组</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-200 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-100">每日 48 次推送</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-200 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-100">3 个推送渠道</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-200 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-100">AI 智能筛选 + 深度分析</span>
+                        </li>
+                    </ul>
+                    <a href="#cta" class="block text-center bg-white text-primary-700 hover:bg-primary-50 px-6 py-3 rounded-full font-medium transition-all">
+                        免费试用 7 天
+                    </a>
+                </div>
+                <div class="scroll-reveal bg-white rounded-2xl p-8 shadow-sm border border-primary-100 card-hover" style="transition-delay: 0.2s;">
+                    <h3 class="text-xl font-bold font-heading mb-2">企业版</h3>
+                    <p class="text-sm text-primary-500 mb-6">适合企业和组织</p>
+                    <div class="mb-6">
+                        <span class="text-4xl font-bold font-heading">定制</span>
+                    </div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">无限热榜平台</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">无限推送 + 无限渠道</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">多用户协作</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">专属客户经理</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check" class="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="text-sm text-primary-700">API 接入 + 定制开发</span>
+                        </li>
+                    </ul>
+                    <a href="#cta" class="block text-center border-2 border-primary-200 hover:border-primary-400 text-primary-700 px-6 py-3 rounded-full font-medium transition-all hover:bg-primary-50">
+                        联系我们
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="cta" class="py-20 lg:py-28 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 text-white relative overflow-hidden">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-cta-500/10 rounded-full blur-3xl"></div>
+        </div>
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 scroll-reveal">
+            <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold font-heading mb-6">准备好构建你的情报系统了吗？</h2>
+            <p class="text-xl text-primary-100 mb-10 max-w-2xl mx-auto">告别无效刷屏，让关键信息在关键时刻主动找到你。注册即享 7 天免费试用。</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/register" class="bg-white text-primary-700 hover:bg-primary-50 px-8 py-4 rounded-full font-medium transition-all hover:shadow-xl flex items-center justify-center gap-2">
+                    <i data-lucide="user-plus" class="w-5 h-5"></i>
+                    <span>免费注册</span>
+                </a>
+                <a href="/login" class="border-2 border-white/30 hover:border-white text-white px-8 py-4 rounded-full font-medium transition-all hover:bg-white/10 flex items-center justify-center gap-2">
+                    <i data-lucide="log-in" class="w-5 h-5"></i>
+                    <span>登录</span>
+                </a>
+            </div>
+            <div class="flex flex-wrap justify-center gap-6 mt-10 text-sm text-primary-200">
+                <span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> 7 天免费试用</span>
+                <span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> 无需信用卡</span>
+                <span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> 即开即用</span>
+                <span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> 随时取消</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-primary-900 text-primary-300 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-8 h-8 bg-gradient-to-br from-primary-400 to-cta-500 rounded-lg flex items-center justify-center">
+                            <i data-lucide="radar" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <span class="text-xl font-bold font-heading text-white">TrendRadar</span>
+                    </div>
+                    <p class="text-sm leading-relaxed max-w-sm">全网热点情报系统。让关键信息在关键时刻主动找到你。</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium mb-4">产品</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#features" class="hover:text-white transition-colors">功能介绍</a></li>
+                        <li><a href="/pricing" class="hover:text-white transition-colors">定价方案</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">更新日志</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">帮助中心</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-medium mb-4">公司</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-white transition-colors">关于我们</a></li>
+                        <li><a href="#" class="hover:text-white transition-colors">联系我们</a></li>
+                        <li><a href="/privacy-policy" class="hover:text-white transition-colors">隐私政策</a></li>
+                        <li><a href="/terms-of-service" class="hover:text-white transition-colors">服务条款</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-primary-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-sm">&copy; 2026 TrendRadar. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 50) {
+                navbar.classList.add('bg-white/90', 'backdrop-blur-md', 'shadow-sm');
+            } else {
+                navbar.classList.remove('bg-white/90', 'backdrop-blur-md', 'shadow-sm');
+            }
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+    </script>
+</body>
+</html>

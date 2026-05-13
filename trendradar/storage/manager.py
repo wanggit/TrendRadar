@@ -39,6 +39,7 @@ class StorageManager:
         pull_enabled: bool = False,
         pull_days: int = 0,
         timezone: str = DEFAULT_TIMEZONE,
+        mysql_config: Optional[dict] = None,
     ):
         """
         初始化存储管理器
@@ -65,6 +66,7 @@ class StorageManager:
         self.pull_enabled = pull_enabled
         self.pull_days = pull_days
         self.timezone = timezone
+        self.mysql_config = mysql_config
 
         self._backend: Optional[StorageBackend] = None
         self._remote_backend: Optional[StorageBackend] = None
@@ -168,6 +170,7 @@ class StorageManager:
                     enable_txt=self.enable_txt,
                     enable_html=self.enable_html,
                     timezone=self.timezone,
+                    mysql_config=self.mysql_config,
                 )
                 print(f"[存储管理器] 使用本地存储后端 (数据目录: {self.data_dir})")
 
@@ -381,6 +384,7 @@ def get_storage_manager(
     pull_days: int = 0,
     timezone: str = DEFAULT_TIMEZONE,
     force_new: bool = False,
+    mysql_config: Optional[dict] = None,
 ) -> StorageManager:
     """
     获取存储管理器单例
@@ -415,6 +419,7 @@ def get_storage_manager(
             pull_enabled=pull_enabled,
             pull_days=pull_days,
             timezone=timezone,
+            mysql_config=mysql_config,
         )
 
     return _storage_manager

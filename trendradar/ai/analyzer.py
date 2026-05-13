@@ -8,7 +8,7 @@ AI 分析器模块
 
 import json
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from trendradar.ai.client import AIClient
 from trendradar.ai.prompt_loader import load_prompt_template
@@ -79,11 +79,36 @@ class AIAnalyzer:
         self.include_standalone = analysis_config.get("INCLUDE_STANDALONE", False)
         self.language = analysis_config.get("LANGUAGE", "Chinese")
 
-        # 加载提示词模板
-        self.system_prompt, self.user_prompt_template = load_prompt_template(
-            analysis_config.get("PROMPT_FILE", "ai_analysis_prompt.txt"),
-            label="AI",
-        )
+        # 加载提示词模板（从内容直接解析）
+        prompt_content = analysis_config.get("PROMPT_CONTENT", "")
+        if prompt_content:
+            print(f"[AI分析] 提示词已加载 (长度: {len(prompt_content)})")
+            self.system_prompt, self.user_prompt_template = self._parse_prompt_content(prompt_content)
+        else:
+            # 回退到文件加载
+            self.system_prompt, self.user_prompt_template = load_prompt_template(
+                "ai_analysis_prompt.txt",
+                label="AI分析",
+            )
+
+    def _parse_prompt_content(self, content: str) -> Tuple[str, str]:
+        """解析提示词内容，提取 [system] 和 [user] 部分"""
+        system_prompt = ""
+        user_prompt = ""
+
+        if "[system]" in content and "[user]" in content:
+            parts = content.split("[user]")
+            system_part = parts[0]
+            user_part = parts[1] if len(parts) > 1 else ""
+
+            if "[system]" in system_part:
+                system_prompt = system_part.split("[system]")[1].strip()
+
+            user_prompt = user_part.strip()
+        else:
+            user_prompt = content.strip()
+
+        return system_prompt, user_prompt
 
     def analyze(
         self,

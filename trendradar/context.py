@@ -187,6 +187,20 @@ class AppContext:
             local_config = storage_config.get("LOCAL", {})
             pull_config = storage_config.get("PULL", {})
 
+            # MySQL 配置
+            mysql_config = local_config.get("MYSQL", {})
+            mysql_enabled = mysql_config.get("ENABLED", False)
+            mysql_conn = None
+            if mysql_enabled:
+                mysql_conn = {
+                    "host": mysql_config.get("HOST", "192.168.25.64"),
+                    "port": int(mysql_config.get("PORT", "3306")),
+                    "user": mysql_config.get("USERNAME", mysql_config.get("USER", "root")),
+                    "password": mysql_config.get("PASSWORD", "wanggang"),
+                    "database": mysql_config.get("DATABASE", "trendradar"),
+                    "charset": mysql_config.get("CHARSET", "utf8mb4"),
+                }
+
             self._storage_manager = get_storage_manager(
                 backend_type=storage_config.get("BACKEND", "auto"),
                 data_dir=local_config.get("DATA_DIR", "output"),
@@ -204,6 +218,7 @@ class AppContext:
                 pull_enabled=pull_config.get("ENABLED", False),
                 pull_days=pull_config.get("DAYS", 7),
                 timezone=self.timezone,
+                mysql_config=mysql_conn,
             )
         return self._storage_manager
 
@@ -516,14 +531,14 @@ class AppContext:
             priority += 1
         return normalized
 
-    def run_ai_filter(self, interests_file: Optional[str] = None) -> Optional[AIFilterResult]:
+    def run_ai_filter(self, interests_content: Optional[str] = None) -> Optional[AIFilterResult]:
         """
         执行 AI 智能筛选完整流程
 
         Args:
-            interests_file: 兴趣描述文件名（位于 config/custom/ai/），None=使用默认 config/ai_interests.txt
+            interests_content: 兴趣描述内容，None=使用配置中的默认内容
 
-        1. 读取兴趣描述文件，计算 hash
+        1. 读取兴趣描述内容，计算 hash
         2. 对比数据库 prompt_hash，决定是否重新提取标签
         3. 收集待分类新闻（去重）
         4. 按 batch_size 分组调用 AI 分类
@@ -543,28 +558,26 @@ class AppContext:
         # 创建 AIFilter 实例
         ai_filter = AIFilter(ai_config, filter_config, self.get_time, debug)
 
-        # 确定实际使用的兴趣文件名
-        # None = 使用默认 config/ai_interests.txt，指定文件名 = config/custom/ai/{name}
-        configured_interests = interests_file or filter_config.get("INTERESTS_FILE")
-        effective_interests_file = configured_interests or "ai_interests.txt"
+        # 确定实际使用的兴趣内容
+        effective_interests_content = interests_content or filter_config.get("INTERESTS_CONTENT", "")
 
         if debug:
             print(f"[AI筛选][DEBUG] === 配置信息 ===")
             print(f"[AI筛选][DEBUG] 存储后端: {self.get_storage_manager().backend_name}")
             print(f"[AI筛选][DEBUG] batch_size={filter_config.get('BATCH_SIZE', 200)}, "
                   f"batch_interval={filter_config.get('BATCH_INTERVAL', 5)}")
-            print(f"[AI筛选][DEBUG] interests_file={effective_interests_file}")
-            print(f"[AI筛选][DEBUG] prompt_file={filter_config.get('PROMPT_FILE', 'prompt.txt')}")
-            print(f"[AI筛选][DEBUG] extract_prompt_file={filter_config.get('EXTRACT_PROMPT_FILE', 'extract_prompt.txt')}")
+            print(f"[AI筛选][DEBUG] interests_content 长度={len(effective_interests_content)}")
 
         # 1. 读取兴趣描述
-        # 传 configured_interests（可能为 None）给 load_interests_content，
-        # 让它区分"默认文件(config/ai_interests.txt)"和"自定义文件(config/custom/ai/)"
-        interests_content = ai_filter.load_interests_content(configured_interests)
+        print(f"[AI筛选] 加载兴趣描述内容 (长度: {len(effective_interests_content)})")
+        if debug:
+            print(f"[AI筛选][DEBUG] 兴趣描述内容预览:\n{effective_interests_content[:500]}...")
+            
+        interests_content = ai_filter.load_interests_content(effective_interests_content)
         if not interests_content:
-            return AIFilterResult(success=False, error="兴趣描述文件为空或不存在")
+            return AIFilterResult(success=False, error="兴趣描述内容为空或不存在")
 
-        current_hash = ai_filter.compute_interests_hash(interests_content, effective_interests_file)
+        current_hash = ai_filter.compute_interests_hash(interests_content, "interests")
         storage = self.get_storage_manager()
 
         if debug:
@@ -575,7 +588,7 @@ class AppContext:
         storage.begin_batch()
 
         # 3. 检查提示词是否变更
-        stored_hash = storage.get_latest_prompt_hash(interests_file=effective_interests_file)
+        stored_hash = storage.get_latest_prompt_hash(interests_file="interests")
 
         if debug:
             print(f"[AI筛选][DEBUG] 数据库存储 hash: {stored_hash}")
@@ -587,17 +600,17 @@ class AppContext:
 
             if stored_hash is None:
                 # 首次运行，直接提取并保存全部标签
-                print(f"[AI筛选] 首次运行 ({effective_interests_file})，提取标签...")
+                print(f"[AI筛选] 首次运行，提取标签...")
                 tags_data = ai_filter.extract_tags(interests_content)
                 if not tags_data:
                     storage.end_batch()
                     return AIFilterResult(success=False, error="标签提取失败")
                 tags_data = self._with_ordered_priorities(tags_data, start_priority=1)
-                saved_count = storage.save_ai_filter_tags(tags_data, new_version, current_hash, interests_file=effective_interests_file)
+                saved_count = storage.save_ai_filter_tags(tags_data, new_version, current_hash, interests_file="interests")
                 print(f"[AI筛选] 已保存 {saved_count} 个标签 (版本 {new_version})")
             else:
                 # 兴趣描述已变更，让 AI 对比旧标签和新兴趣，给出更新方案
-                old_tags = storage.get_active_ai_filter_tags(interests_file=effective_interests_file)
+                old_tags = storage.get_active_ai_filter_tags(interests_file="interests")
                 update_result = ai_filter.update_tags(old_tags, interests_content)
 
                 if update_result is None:
@@ -608,9 +621,9 @@ class AppContext:
                         storage.end_batch()
                         return AIFilterResult(success=False, error="标签提取失败")
                     tags_data = self._with_ordered_priorities(tags_data, start_priority=1)
-                    deprecated_count = storage.deprecate_all_ai_filter_tags(interests_file=effective_interests_file)
-                    storage.clear_analyzed_news(interests_file=effective_interests_file)
-                    saved_count = storage.save_ai_filter_tags(tags_data, new_version, current_hash, interests_file=effective_interests_file)
+                    deprecated_count = storage.deprecate_all_ai_filter_tags(interests_file="interests")
+                    storage.clear_analyzed_news(interests_file="interests")
+                    saved_count = storage.save_ai_filter_tags(tags_data, new_version, current_hash, interests_file="interests")
                     print(f"[AI筛选] 废弃 {deprecated_count} 个旧标签, 保存 {saved_count} 个新标签 (版本 {new_version})")
                 else:
                     change_ratio = update_result["change_ratio"]
@@ -623,19 +636,19 @@ class AppContext:
 
                     if change_ratio >= threshold:
                         # 全量重分类：废弃所有旧标签，用 extract_tags 重新提取
-                        print(f"[AI筛选] 兴趣文件变更: {effective_interests_file} (AI change_ratio={change_ratio:.2f} >= threshold={threshold:.2f} → 全量重分类)")
+                        print(f"[AI筛选] 兴趣内容变更 (AI change_ratio={change_ratio:.2f} >= threshold={threshold:.2f} → 全量重分类)")
                         tags_data = ai_filter.extract_tags(interests_content)
                         if not tags_data:
                             storage.end_batch()
                             return AIFilterResult(success=False, error="标签提取失败")
                         tags_data = self._with_ordered_priorities(tags_data, start_priority=1)
-                        deprecated_count = storage.deprecate_all_ai_filter_tags(interests_file=effective_interests_file)
-                        storage.clear_analyzed_news(interests_file=effective_interests_file)
-                        saved_count = storage.save_ai_filter_tags(tags_data, new_version, current_hash, interests_file=effective_interests_file)
+                        deprecated_count = storage.deprecate_all_ai_filter_tags(interests_file="interests")
+                        storage.clear_analyzed_news(interests_file="interests")
+                        saved_count = storage.save_ai_filter_tags(tags_data, new_version, current_hash, interests_file="interests")
                         print(f"[AI筛选] 废弃 {deprecated_count} 个旧标签, 保存 {saved_count} 个新标签 (版本 {new_version})")
                     else:
                         # 增量更新：按 AI 指示操作
-                        print(f"[AI筛选] 兴趣文件变更: {effective_interests_file} (AI change_ratio={change_ratio:.2f} < threshold={threshold:.2f} → 增量更新)")
+                        print(f"[AI筛选] 兴趣内容变更 (AI change_ratio={change_ratio:.2f} < threshold={threshold:.2f} → 增量更新)")
                         print(f"[AI筛选]   保留 {len(keep_tags)} 个标签, 新增 {len(add_tags)} 个, 废弃 {len(remove_tags)} 个")
 
                         # 废弃 AI 标记移除的标签
@@ -650,29 +663,29 @@ class AppContext:
                         # 更新保留标签的描述
                         keep_with_priority = []
                         if keep_tags:
-                            storage.update_ai_filter_tag_descriptions(keep_tags, interests_file=effective_interests_file)
+                            storage.update_ai_filter_tag_descriptions(keep_tags, interests_file="interests")
                             keep_with_priority = self._with_ordered_priorities(keep_tags, start_priority=1)
-                            storage.update_ai_filter_tag_priorities(keep_with_priority, interests_file=effective_interests_file)
+                            storage.update_ai_filter_tag_priorities(keep_with_priority, interests_file="interests")
 
                         # 保存新增标签
                         if add_tags:
                             add_start = keep_with_priority[-1]["priority"] + 1 if keep_with_priority else 1
                             add_with_priority = self._with_ordered_priorities(add_tags, start_priority=add_start)
-                            saved_count = storage.save_ai_filter_tags(add_with_priority, new_version, current_hash, interests_file=effective_interests_file)
+                            saved_count = storage.save_ai_filter_tags(add_with_priority, new_version, current_hash, interests_file="interests")
                             if debug:
                                 print(f"[AI筛选][DEBUG] 新增保存 {saved_count} 个标签")
 
                         # 更新保留标签的 hash（标记为已处理）
-                        storage.update_ai_filter_tags_hash(effective_interests_file, current_hash)
+                        storage.update_ai_filter_tags_hash("interests", current_hash)
 
                         # 增量更新：清除不匹配新闻的分析记录，让它们有机会被新标签集重新分析
                         if add_tags:
-                            cleared = storage.clear_unmatched_analyzed_news(interests_file=effective_interests_file)
+                            cleared = storage.clear_unmatched_analyzed_news(interests_file="interests")
                             if cleared > 0:
                                 print(f"[AI筛选]   清除 {cleared} 条不匹配记录，将在新标签下重新分析")
 
         # 3. 获取当前 active 标签
-        active_tags = storage.get_active_ai_filter_tags(interests_file=effective_interests_file)
+        active_tags = storage.get_active_ai_filter_tags(interests_file="interests")
         if debug:
             print(f"[AI筛选][DEBUG] 从数据库获取 active 标签: {len(active_tags)} 个")
             for t in active_tags:
@@ -687,7 +700,7 @@ class AppContext:
         # 4. 收集待分类新闻
         # 热榜
         all_news = storage.get_all_news_ids()
-        analyzed_hotlist = storage.get_analyzed_news_ids("hotlist", interests_file=effective_interests_file)
+        analyzed_hotlist = storage.get_analyzed_news_ids("hotlist", interests_file="interests")
         pending_news = [n for n in all_news if n["id"] not in analyzed_hotlist]
 
         # RSS（先做新鲜度过滤，再去除已分类的）
@@ -725,7 +738,7 @@ class AppContext:
                         continue
                 fresh_rss.append(n)
 
-            analyzed_rss = storage.get_analyzed_news_ids("rss", interests_file=effective_interests_file)
+            analyzed_rss = storage.get_analyzed_news_ids("rss", interests_file="interests")
             pending_rss = [n for n in fresh_rss if n["id"] not in analyzed_rss]
 
         # 始终打印总量/已分析/待分析 的详细数据
@@ -800,14 +813,14 @@ class AppContext:
         if pending_news:
             hotlist_ids = [n["id"] for n in pending_news]
             storage.save_analyzed_news(
-                hotlist_ids, "hotlist", effective_interests_file,
+                hotlist_ids, "hotlist", "interests",
                 current_hash, matched_hotlist_ids
             )
 
         if pending_rss:
             rss_ids = [n["id"] for n in pending_rss]
             storage.save_analyzed_news(
-                rss_ids, "rss", effective_interests_file,
+                rss_ids, "rss", "interests",
                 current_hash, matched_rss_ids
             )
 
@@ -820,7 +833,7 @@ class AppContext:
         storage.end_batch()
 
         # 8. 查询并组装返回结果
-        all_results = storage.get_active_ai_filter_results(interests_file=effective_interests_file)
+        all_results = storage.get_active_ai_filter_results(interests_file="interests")
 
         if debug:
             print(f"[AI筛选][DEBUG] === 最终汇总 ===")

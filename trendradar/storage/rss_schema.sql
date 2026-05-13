@@ -1,62 +1,61 @@
--- TrendRadar RSS 数据库表结构
--- 用于存储 RSS/Atom 订阅源数据
+-- TrendRadar RSS 数据库表结构 (MySQL)
 
 -- ============================================
 -- RSS 源配置表
--- 存储订阅源的基本信息
 -- ============================================
 CREATE TABLE IF NOT EXISTS rss_feeds (
-    id TEXT PRIMARY KEY,                      -- 源 ID（如 "hacker-news"）
-    name TEXT NOT NULL,                       -- 显示名称（如 "Hacker News"）
-    feed_url TEXT DEFAULT '',                 -- RSS/Atom URL（可选，配置文件中已有）
-    is_active INTEGER DEFAULT 1,              -- 是否启用
-    last_fetch_time TEXT,                     -- 最后抓取时间
-    last_fetch_status TEXT,                   -- 最后抓取状态（success/failed）
-    item_count INTEGER DEFAULT 0,             -- 当日条目数
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    feed_url VARCHAR(2000) DEFAULT '',
+    is_active TINYINT(1) DEFAULT 1,
+    last_fetch_time VARCHAR(50),
+    last_fetch_status VARCHAR(20),
+    item_count INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- ============================================
 -- RSS 条目表
--- 以 URL + feed_id 为唯一标识，支持去重存储
 -- ============================================
 CREATE TABLE IF NOT EXISTS rss_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,                      -- 标题
-    feed_id TEXT NOT NULL,                    -- 所属 RSS 源
-    url TEXT NOT NULL,                        -- 文章链接
-    published_at TEXT,                        -- RSS 发布时间（ISO 格式）
-    summary TEXT,                             -- 摘要/描述
-    author TEXT,                              -- 作者
-    first_crawl_time TEXT NOT NULL,           -- 首次抓取时间
-    last_crawl_time TEXT NOT NULL,            -- 最后抓取时间
-    crawl_count INTEGER DEFAULT 1,            -- 抓取次数
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    date VARCHAR(20) NOT NULL,
+    title TEXT NOT NULL,
+    feed_id VARCHAR(255) NOT NULL,
+    url VARCHAR(2000) NOT NULL,
+    published_at VARCHAR(50),
+    summary TEXT,
+    author VARCHAR(255),
+    first_crawl_time VARCHAR(50) NOT NULL,
+    last_crawl_time VARCHAR(50) NOT NULL,
+    crawl_count INT DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (feed_id) REFERENCES rss_feeds(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (feed_id) REFERENCES rss_feeds(id),
+    UNIQUE KEY uk_date_url_feed (date, url, feed_id)
 );
 
 -- ============================================
 -- 抓取记录表
--- 记录每次抓取的时间和数量
 -- ============================================
 CREATE TABLE IF NOT EXISTS rss_crawl_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    crawl_time TEXT NOT NULL UNIQUE,          -- 抓取时间（HH:MM）
-    total_items INTEGER DEFAULT 0,            -- 总条目数
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    date VARCHAR(20) NOT NULL,
+    crawl_time VARCHAR(50) NOT NULL,
+    total_items INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_date_crawl_time (date, crawl_time)
 );
 
 -- ============================================
 -- 抓取来源状态表
--- 记录每次抓取各 RSS 源的成功/失败状态
 -- ============================================
 CREATE TABLE IF NOT EXISTS rss_crawl_status (
-    crawl_record_id INTEGER NOT NULL,
-    feed_id TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('success', 'failed')),
-    error_message TEXT,                       -- 失败时的错误信息
+    crawl_record_id INT NOT NULL,
+    feed_id VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    error_message TEXT,
     PRIMARY KEY (crawl_record_id, feed_id),
     FOREIGN KEY (crawl_record_id) REFERENCES rss_crawl_records(id),
     FOREIGN KEY (feed_id) REFERENCES rss_feeds(id)
@@ -64,39 +63,25 @@ CREATE TABLE IF NOT EXISTS rss_crawl_status (
 
 -- ============================================
 -- 推送记录表
--- 用于 push_window once_per_day 功能
--- 以及 ai_analysis analysis_window once_per_day 功能
 -- ============================================
 CREATE TABLE IF NOT EXISTS rss_push_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL UNIQUE,                -- 日期（YYYY-MM-DD）
-    pushed INTEGER DEFAULT 0,                 -- 是否已推送
-    push_time TEXT,                           -- 推送时间
-    ai_analyzed INTEGER DEFAULT 0,            -- 是否已进行 AI 分析
-    ai_analysis_time TEXT,                    -- AI 分析时间
-    ai_analysis_mode TEXT,                    -- AI 分析模式
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    date VARCHAR(20) NOT NULL UNIQUE,
+    pushed TINYINT(1) DEFAULT 0,
+    push_time VARCHAR(50),
+    ai_analyzed TINYINT(1) DEFAULT 0,
+    ai_analysis_time VARCHAR(50),
+    ai_analysis_mode VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================
 -- 索引定义
 -- ============================================
-
--- RSS 源索引
-CREATE INDEX IF NOT EXISTS idx_rss_feed ON rss_items(feed_id);
-
--- 发布时间索引（用于按时间排序）
-CREATE INDEX IF NOT EXISTS idx_rss_published ON rss_items(published_at DESC);
-
--- 抓取时间索引（用于查询最新数据）
-CREATE INDEX IF NOT EXISTS idx_rss_crawl_time ON rss_items(last_crawl_time);
-
--- 标题索引（用于标题搜索）
-CREATE INDEX IF NOT EXISTS idx_rss_title ON rss_items(title);
-
--- URL + feed_id 唯一索引（实现去重）
-CREATE UNIQUE INDEX IF NOT EXISTS idx_rss_url_feed
-    ON rss_items(url, feed_id);
-
--- 抓取状态索引
-CREATE INDEX IF NOT EXISTS idx_rss_crawl_status_record ON rss_crawl_status(crawl_record_id);
+CREATE INDEX idx_rss_date ON rss_items(date);
+CREATE INDEX idx_rss_feed ON rss_items(feed_id);
+CREATE INDEX idx_rss_published ON rss_items(published_at);
+CREATE INDEX idx_rss_crawl_time ON rss_items(last_crawl_time);
+CREATE INDEX idx_rss_title ON rss_items(title);
+CREATE INDEX idx_rss_crawl_status_record ON rss_crawl_status(crawl_record_id);
+CREATE INDEX idx_rss_crawl_records_date ON rss_crawl_records(date);
